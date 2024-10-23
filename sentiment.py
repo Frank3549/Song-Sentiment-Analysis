@@ -5,7 +5,14 @@ Full Name: Frank Bautista
 
 Brief description of my custom classifier:
 
-TODO: Answer the questions included in the assignment
+I believe the Naive Bayes model we have constructed does an ok job at predicting sentiment.
+However i believe it will always do a horrible job at predicting sentiment when there is a negating word in the sentence.
+For example: I do not like this movie. Most of the sentence is positive but the word "not" makes the sentence negative.
+I believe the model could do a better job at predicting sentiment if it could take into account negating words, possibly getting rid of 
+connecting words like "is" "and" etc... and only focusing on the main words that most likely determine sentiment. Most of these connecting words
+are short in length, so i believe it may be possible to remove a significant portion by having a word limit of 2-4 characters (as long as its not a  common negating word).
+
+(not yet implemented)
 """
 import argparse, math, os, re, string, zipfile
 from typing import Generator, Hashable, Iterable, List, Sequence, Tuple
@@ -119,7 +126,7 @@ class Sentiment:
 
         """
         accumulation_of_probabilities = 0
-        
+
         if sentiment == 1:
             total_positive_words = sum(self.positive_words_frequencies.values())
             for word in words:
