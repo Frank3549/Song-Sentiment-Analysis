@@ -1,10 +1,4 @@
-# CS311 Programming Assignment 4: Naïve Bayes
-
-For this assignment, you will be training and testing Naïve Bayes models for predicting text sentiment. Refer to the Canvas assignment for assignment specifications. This README describes how to run the skeleton code.
-
-## Running the skeleton program
-
-The skeleton code trains and tests your Naïve Bayes model on the provide training and test data and can also be used to predict the sentiment for provided text. Executing `sentiment.py` will train and test your model by default, e.g.,
+# Sentiment Analysis Project
 
 ```
 $ python3 sentiment.py 
@@ -42,8 +36,6 @@ For example, to test your program on a specific string you can provide it as pos
 $ python3 sentiment.py "computer science is awesome"
 [0.23071661 0.76928339]
 ```
-
-If you are working with Thonny, recall that you can change the command line arguments by modifying the `%Run` command in the shell, e.g., `%Run sentiment.py "computer science is awesome"`.
 
 ** Note that the skeleton code will read the the zip file directly. You do not need to unzip those files.** 
 
