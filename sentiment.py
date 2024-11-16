@@ -1,23 +1,14 @@
 """
-CS311 Programming Assignment 4: Naive Bayes
+CS311 Project Song Lyrics Sentiment Analysis
 
 Full Name: Frank Bautista
 
-Brief description of my custom classifier:
-
-I believe the Naive Bayes model we have constructed does an ok job at predicting sentiment.
-However i believe it will always do a horrible job at predicting sentiment when there is a negating word in the sentence.
-For example: I do not like this movie. Most of the sentence is positive but the word "not" makes the sentence negative.
-I believe the model could do a better job at predicting sentiment if it could take into account negating words, possibly getting rid of 
-connecting words like "is" "and" etc... and only focusing on the main words that most likely determine sentiment. Most of these connecting words
-are short in length, so i believe it may be possible to remove a significant portion by having a word limit of 2-4 characters (as long as its not a  common negating word).
-
-(not yet implemented)
 """
 import argparse, math, os, re, string, zipfile
 from typing import Generator, Hashable, Iterable, List, Sequence, Tuple
 import numpy as np
 from sklearn import metrics
+import pandas as pd
 
 
 
@@ -30,13 +21,17 @@ class Sentiment:
         Args:
             labels (Iterable[Hashable]): Iterable of potential labels in sorted order.
         """
-        self.positive_documents_count = 0
-        self.negative_documents_count = 0
-        self.positive_words_frequencies = {}
-        self.negative_words_frequencies = {}
-        self.unique_positive_words = 0
-        self.unique_negative_words = 0
-        self.labels = labels
+
+        """
+        PREVIOUS IMPLEMENTATION
+            self.positive_documents_count = 0
+            self.negative_documents_count = 0
+            self.positive_words_frequencies = {}
+            self.negative_words_frequencies = {}
+            self.unique_positive_words = 0
+            self.unique_negative_words = 0
+            self.labels = labels
+        """
 
 
     def preprocess(self, example: str, id:str =None) -> List[str]:
@@ -63,7 +58,6 @@ class Sentiment:
             label (Hashable): Example label
             id (str, optional): File name from training/test data (may not be available). Defaults to None.
         """
-        # TODO: Implement function to update the model with words identified in this training example
         stripped_example = self.preprocess(example)
         if label == 1:
             self.positive_documents_count += 1
@@ -144,6 +138,15 @@ class CustomSentiment(Sentiment):
     def __init__(self, labels: Iterable[Hashable]):
         super().__init__(labels)
 
+class MultiClassNaiveBayes(Sentiment):
+    def __init__(self, labels):
+        super().__init__(labels)
+    
+    def add_example(self, example: str, label: Hashable):
+        pass
+
+full_dataset = pd.concat([pd.read_csv('goEmotionsData/goemotions_1.csv'), pd.read_csv('goEmotionsData/goemotions_2.csv'), pd.read_csv('goEmotionsData/goemotions_3.csv')]) 
+filtered_dataset =  full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
 
 
 def process_zipfile(filename: str) -> Generator[Tuple[str, str, int], None, None]:
