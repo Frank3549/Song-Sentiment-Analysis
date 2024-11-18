@@ -22,16 +22,13 @@ class Sentiment:
             labels (Iterable[Hashable]): Iterable of potential labels in sorted order.
         """
 
-        """
-        PREVIOUS IMPLEMENTATION
-            self.positive_documents_count = 0
-            self.negative_documents_count = 0
-            self.positive_words_frequencies = {}
-            self.negative_words_frequencies = {}
-            self.unique_positive_words = 0
-            self.unique_negative_words = 0
-            self.labels = labels
-        """
+        self.positive_documents_count = 0
+        self.negative_documents_count = 0
+        self.positive_words_frequencies = {}
+        self.negative_words_frequencies = {}
+        self.unique_positive_words = 0
+        self.unique_negative_words = 0
+        self.labels = labels
 
 
     def preprocess(self, example: str, id:str =None) -> List[str]:
@@ -139,11 +136,56 @@ class CustomSentiment(Sentiment):
         super().__init__(labels)
 
 class MultiClassNaiveBayes(Sentiment):
+
     def __init__(self, labels):
         super().__init__(labels)
+        self.word_frequencies = {label: {} for label in self.labels}
+        self.document_counts = {label: 0 for label in self.labels}
+        self.unique_word_counts = {label: 0 for label in self.labels}
+
+
     
-    def add_example(self, example: str, label: Hashable):
-        pass
+    def add_example(self, example: str, labels: List[Hashable]):
+        """
+        Add a single training example with label to the model
+
+        Args:
+            example (str): Text input
+            label List[Hashable]: Example labels (multi-class)
+
+        """
+        stripped_example = self.preprocess(example)
+        for label in labels:
+            self.document_counts[label] += 1
+            for word in stripped_example:
+                if word in self.word_frequencies[label]:
+                    self.word_frequencies[label][word] += 1
+                else:
+                    self.word_frequencies[label][word] = 1
+                    self.unique_word_counts[label] += 1
+
+    def predict(self, example: str, pseudo=0.0001) -> Sequence[float]:
+        """
+        Predict the P(label|example) for example text, return probabilities as a sequence
+
+        Args:
+            example (str): Test input
+            pseudo (float, optional): Pseudo-count for Laplace smoothing. Defaults to 0.0001.
+
+        Returns:
+            Sequence[float]: Probabilities in order of originally provided labels
+        """
+        stripped_example = self.preprocess(example)
+
+        # Calculate the prior probabilities and conditional probabilities for each label
+        prior_probabilities = {label: math.log(self.document_counts[label] / sum(self.document_counts.values())) for label in self.labels}
+        conditional_probabilities = {label: self.conditional_probability(stripped_example, label, pseudo) for label in self.labels}
+        naive_bayes_denominator = np.logaddexp.reduce([prior_probabilities[label] + conditional_probabilities[label] for label in self.labels])
+
+        # Returns the probabilities in the order of the labels provided. 
+        return [math.exp(prior_probabilities[label] + conditional_probabilities[label] - naive_bayes_denominator) for label in self.labels]
+
+
 
 full_dataset = pd.concat([pd.read_csv('goEmotionsData/goemotions_1.csv'), pd.read_csv('goEmotionsData/goemotions_2.csv'), pd.read_csv('goEmotionsData/goemotions_3.csv')]) 
 filtered_dataset =  full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
