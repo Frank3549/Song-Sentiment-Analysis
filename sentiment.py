@@ -9,6 +9,7 @@ from typing import Generator, Hashable, Iterable, List, Sequence, Tuple
 import numpy as np
 from sklearn import metrics
 import pandas as pd
+from sklearn.model_selection import train_test_split # for splitting the dataset into training and testing sets
 
 
 
@@ -155,7 +156,7 @@ class MultiClassNaiveBayes(Sentiment):
 
         """
         stripped_example = self.preprocess(example)
-        for label in labels:
+        for label in labels: # if label is present, increment document count and word frequency
             self.document_counts[label] += 1
             for word in stripped_example:
                 if word in self.word_frequencies[label]:
@@ -186,9 +187,6 @@ class MultiClassNaiveBayes(Sentiment):
         return [math.exp(prior_probabilities[label] + conditional_probabilities[label] - naive_bayes_denominator) for label in self.labels]
 
 
-
-full_dataset = pd.concat([pd.read_csv('goEmotionsData/goemotions_1.csv'), pd.read_csv('goEmotionsData/goemotions_2.csv'), pd.read_csv('goEmotionsData/goemotions_3.csv')]) 
-filtered_dataset =  full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
 
 
 def process_zipfile(filename: str) -> Generator[Tuple[str, str, int], None, None]:
@@ -242,20 +240,27 @@ def compute_metrics(y_true, y_pred):
 
 
 if __name__ == "__main__":
+
+    full_dataset = pd.concat([pd.read_csv('goEmotionsData/goemotions_1.csv'), pd.read_csv('goEmotionsData/goemotions_2.csv'), pd.read_csv('goEmotionsData/goemotions_3.csv')]) 
+    filtered_dataset =  full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
+    train_data, test_data = train_test_split(filtered_dataset, test_size=0.2, random_state=42) # 42 is the answer to everything and also the seed here.
+
     parser = argparse.ArgumentParser(description="Train Naive Bayes sentiment analyzer")
 
     parser.add_argument(
         "--train",
-        default="data/train.zip",
+        default=train_data,
         help="Path to zip file or directory containing training files.",
     )
+    """
     parser.add_argument(
         "--test",
         default="data/test.zip",
         help="Path to zip file or directory containing testing files.",
     )
+    """
     parser.add_argument(
-        "-m", "--model", default="base", help="Model to use: One of base or custom"
+        "-m", "--model", default="multi", help="Model to use: One of base, custom, multi-class"
     )
     parser.add_argument("example", nargs="?", default=None)
 
@@ -264,13 +269,21 @@ if __name__ == "__main__":
     # Train model
     if args.model == "custom":
         model = CustomSentiment(labels=[0, 1])
-    else:
+    elif args.model == "base":
         model = Sentiment(labels=[0, 1])
-    for id, example, y_true in process_zipfile(
-        os.path.join(os.path.dirname(__file__), args.train)
-    ):
-        model.add_example(example, y_true, id=id)
+    else:
+        model = MultiClassNaiveBayes(labels=filtered_dataset.columns[9:].toList())
 
+    if args.model == "custom" or args.model == "base":
+        for id, example, y_true in process_zipfile(
+            os.path.join(os.path.dirname(__file__), args.train)
+        ):
+            model.add_example(example, y_true, id=id)
+    else:
+        for _, row in train_data.iterrows():
+            example  = row['text'] # extract text from the 'text' column
+            emotion_labels = [label for label in filtered_dataset.columns[9:] if row[label] == 1] 
+            model.add_example(example, emotion_labels)
     # If interactive example provided, compute sentiment for that example
     if args.example:
         print(model.predict(args.example))
