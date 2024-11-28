@@ -142,7 +142,7 @@ class MultiClassNaiveBayes(Sentiment):
         super().__init__(labels)
         self.word_frequencies = {label: {} for label in self.labels}
         self.document_counts = {label: 0 for label in self.labels}
-        self.unique_word_counts = {label: 0 for label in self.labels}
+        self.total_words_for_label = {label: 0 for label in self.labels}
 
 
     
@@ -158,14 +158,15 @@ class MultiClassNaiveBayes(Sentiment):
         stripped_example = self.preprocess(example)
         for label in labels: # if label is present, increment document count and word frequency
             self.document_counts[label] += 1
+            
             for word in stripped_example:
+                self.total_words_for_label[label] += 1
                 if word in self.word_frequencies[label]:
                     self.word_frequencies[label][word] += 1
                 else:
                     self.word_frequencies[label][word] = 1
-                    self.unique_word_counts[label] += 1
 
-    def predict(self, example: str, pseudo=0.0001, threshold=0.25) -> Sequence[float]:
+    def predict(self, example: str, pseudo=0.0001, threshold=0.01) -> Sequence[float]:
         """
         Predict the P(label|example) for example text, return probabilities as a sequence
 
@@ -193,8 +194,29 @@ class MultiClassNaiveBayes(Sentiment):
 
         # Only return labels with non-zero probabilities
         return [label for label in self.labels if label_probabilities[label] > 0]
+    
+    def conditional_probability(self, words, label, pseudo=0.0001) -> float:
+        """
+        Given a list of words, find the conditional probability of the features (words) given the sentiment using the Naive Bayes model.
 
+        Args:
+            words (list): list of preprocessed words. The features.
+            sentiment (int): the sentiment to calculate the conditional probability for. 0 for negative, 1 for positive
+            pseudo (float): Pseudo-count for Laplace smoothing. Defaults to 0.0001.
+        
+        Returns:
+            float: the conditional probability of the features given the sentiment. (log probability to avoid underflow)
 
+        """
+        accumulation_of_probabilities = 0
+
+        for word in words:
+            word_count = self.word_frequencies[label].get(word, 0)
+            # Using Laplace smoothing to avoid zero probabilities
+            probability = (word_count + pseudo) / (self.total_words_for_label[label] + pseudo * len(self.word_frequencies[label]) )
+            accumulation_of_probabilities += math.log(probability)
+
+        return accumulation_of_probabilities
 
 
 
@@ -250,7 +272,7 @@ def compute_metrics(y_true, y_pred):
 
 if __name__ == "__main__":
 
-    full_dataset = pd.concat([pd.read_csv('goEmotionsData/goemotions_1.csv'), pd.read_csv('goEmotionsData/goemotions_2.csv'), pd.read_csv('goEmotionsData/goemotions_3.csv')]) 
+    full_dataset = pd.concat([pd.read_csv("goEmotionData\goemotions_1.csv"), pd.read_csv("goEmotionData\goemotions_2.csv"), pd.read_csv("goEmotionData\goemotions_3.csv")]) 
     filtered_dataset =  full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
     train_data, test_data = train_test_split(filtered_dataset, test_size=0.2, random_state=42) # 42 is the answer to everything and also the seed here.
 
