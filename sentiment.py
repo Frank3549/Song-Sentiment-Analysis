@@ -165,7 +165,7 @@ class MultiClassNaiveBayes(Sentiment):
                     self.word_frequencies[label][word] = 1
                     self.unique_word_counts[label] += 1
 
-    def predict(self, example: str, pseudo=0.0001) -> Sequence[float]:
+    def predict(self, example: str, pseudo=0.0001, threshold=0.25) -> Sequence[float]:
         """
         Predict the P(label|example) for example text, return probabilities as a sequence
 
@@ -183,8 +183,17 @@ class MultiClassNaiveBayes(Sentiment):
         conditional_probabilities = {label: self.conditional_probability(stripped_example, label, pseudo) for label in self.labels}
         naive_bayes_denominator = np.logaddexp.reduce([prior_probabilities[label] + conditional_probabilities[label] for label in self.labels])
 
-        # Returns the probabilities in the order of the labels provided. 
-        return [math.exp(prior_probabilities[label] + conditional_probabilities[label] - naive_bayes_denominator) for label in self.labels]
+        # dictionary of label probabilities
+        label_probabilities = {label: math.exp(prior_probabilities[label] + conditional_probabilities[label] - naive_bayes_denominator) for label in self.labels}
+        
+        # Applying the Threshold
+        for label in self.labels:
+            if label_probabilities[label] < threshold:
+                label_probabilities[label] = 0
+
+        # Only return labels with non-zero probabilities
+        return [label for label in self.labels if label_probabilities[label] > 0]
+
 
 
 
@@ -248,18 +257,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Naive Bayes sentiment analyzer")
 
     parser.add_argument(
-        "--train",
-        default=train_data,
-        help="Path to zip file or directory containing training files.",
-    )
-    """
-    parser.add_argument(
-        "--test",
-        default="data/test.zip",
-        help="Path to zip file or directory containing testing files.",
-    )
-    """
-    parser.add_argument(
         "-m", "--model", default="multi", help="Model to use: One of base, custom, multi-class"
     )
     parser.add_argument("example", nargs="?", default=None)
@@ -272,7 +269,7 @@ if __name__ == "__main__":
     elif args.model == "base":
         model = Sentiment(labels=[0, 1])
     else:
-        model = MultiClassNaiveBayes(labels=filtered_dataset.columns[9:].toList())
+        model = MultiClassNaiveBayes(labels=filtered_dataset.columns[9:].tolist())
 
     if args.model == "custom" or args.model == "base":
         for id, example, y_true in process_zipfile(
@@ -281,28 +278,52 @@ if __name__ == "__main__":
             model.add_example(example, y_true, id=id)
     else:
         for _, row in train_data.iterrows():
-            example  = row['text'] # extract text from the 'text' column
-            emotion_labels = [label for label in filtered_dataset.columns[9:] if row[label] == 1] 
-            model.add_example(example, emotion_labels)
+            text  = row['text'] # extract text from the 'text' column
+            emotion_labels = [label for label in train_data.columns[9:] if row[label] == 1] 
+            model.add_example(text, emotion_labels)
     # If interactive example provided, compute sentiment for that example
     if args.example:
         print(model.predict(args.example))
     else:
-        predictions = []
-        for id, example, y_true in process_zipfile(
-            os.path.join(os.path.dirname(__file__), args.test)
-        ):
-            # Determine the most likely class from predicted probabilities
-            predictions.append((id, y_true, np.argmax(model.predict(example,id=id))))
+        if args.model == "custom" or args.model == "base":
+            predictions = []
+            for id, example, y_true in process_zipfile(
+                os.path.join(os.path.dirname(__file__), args.test)
+            ):
+                # Determine the most likely class from predicted probabilities
+                predictions.append((id, y_true, np.argmax(model.predict(example,id=id))))
 
-        # Compute and print accuracy metrics
-        _, y_test, y_true = zip(*predictions)
-        predict_metrics = compute_metrics(y_test, y_true)
-        for met, val in predict_metrics.items():
-            print(
-                f"{met.capitalize()}: ",
-                ("\n" if isinstance(val, np.ndarray) else ""),
-                val,
-                sep="",
-            )
+            # Compute and print accuracy metrics
+            _, y_test, y_true = zip(*predictions)
+            predict_metrics = compute_metrics(y_test, y_true)
+            for met, val in predict_metrics.items():
+                print(
+                    f"{met.capitalize()}: ",
+                    ("\n" if isinstance(val, np.ndarray) else ""),
+                    val,
+                    sep="",
+                )
+        else:
+            # Predict on test_data
+            y_true = []
+            y_pred = []
+            for _, row in test_data.iterrows():
+                text = row['text']
+                emotion_labels = [label for label in test_data.columns[9:] if row[label] == 1]
+                predicted_labels = model.predict(text)
+
+                y_true.append(emotion_labels)
+                y_pred.append(predicted_labels)
+
+            # Binarize the true and predicted labels for evaluation
+            from sklearn.preprocessing import MultiLabelBinarizer
+            mlb = MultiLabelBinarizer(classes=test_data.columns[9:])
+            y_true_bin = mlb.fit_transform(y_true)
+            y_pred_bin = mlb.transform(y_pred)
+
+            # Print classification metrics
+            from sklearn.metrics import classification_report
+            print("Multi-Class Classification Report:")
+            print(classification_report(y_true_bin, y_pred_bin, target_names=test_data.columns[9:]))
+
 
