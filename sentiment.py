@@ -17,6 +17,7 @@ class MultiClassNaiveBayes():
         self.labels = labels
         self.word_frequencies = {label: {} for label in self.labels}
         self.document_counts = {label: 0 for label in self.labels}
+        self.total_document_count = 0
         self.total_words_for_label = {label: 0 for label in self.labels}
 
     def preprocess(self, text: str) -> List[str]:
@@ -48,7 +49,7 @@ class MultiClassNaiveBayes():
         stripped_example = self.preprocess(example)
         for label in labels: # if label is present, increment document count and word frequency
             self.document_counts[label] += 1
-            
+            self.total_document_count += 1
             for word in stripped_example:
                 self.total_words_for_label[label] += 1
                 if word in self.word_frequencies[label]:
@@ -70,13 +71,13 @@ class MultiClassNaiveBayes():
         stripped_example = self.preprocess(example)
 
         # Calculate the prior probabilities and conditional probabilities for each label
-        prior_probabilities = {label: math.log(self.document_counts[label] / sum(self.document_counts.values())) for label in self.labels}
+        prior_probabilities = {label: math.log(self.document_counts[label] / sum(self.document_counts.values()) ) for label in self.labels}
         conditional_probabilities = {label: self.conditional_probability(stripped_example, label, pseudo) for label in self.labels}
         naive_bayes_denominator = np.logaddexp.reduce([prior_probabilities[label] + conditional_probabilities[label] for label in self.labels])
 
-        # dictionary of label probabilities
+        # key = label, value = P(label|example)
         label_probabilities = {label: math.exp(prior_probabilities[label] + conditional_probabilities[label] - naive_bayes_denominator) for label in self.labels}
-        
+    
         # Applying the Threshold
         for label in self.labels:
             if label_probabilities[label] < threshold:
