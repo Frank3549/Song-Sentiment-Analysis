@@ -7,10 +7,13 @@ Full Name: Frank Bautista
 import argparse, math, string
 from typing import Generator, Hashable, Iterable, List, Sequence, Tuple
 import numpy as np
-from sklearn import metrics
+from sklearn.metrics import accuracy_score, classification_report
 import pandas as pd
 from sklearn.model_selection import train_test_split # for splitting the dataset into training and testing sets
+from sklearn.preprocessing import MultiLabelBinarizer 
+from nltk.corpus import stopwords
 
+NGRAM = 5
 
 class MultiClassNaiveBayes():
     def __init__(self, labels):
@@ -35,7 +38,16 @@ class MultiClassNaiveBayes():
         text = text.strip() # remove leading and trailing whitespaces
         return text.split()
 
+    def n_gram (self, words: List[str], n: int):
+        """Generate n-grams by splitting words into n-sized chunks or smaller if not long enough."""
 
+        n_grams = []
+        for word in words:
+            if len(word) > n:  
+                n_grams.extend([word[i:i+n] for i in range(len(word) - n + 1)])
+            else:
+                n_grams.append(word) 
+        return n_grams
     
     def add_example(self, example: str, labels: List[Hashable]):
         """
@@ -47,7 +59,8 @@ class MultiClassNaiveBayes():
 
         """
         stripped_example = self.preprocess(example)
-        for label in labels: # if label is present, increment document count and word frequency
+        stripped_example = self.n_gram(stripped_example, NGRAM)
+        for label in labels:
             self.document_counts[label] += 1
             self.total_document_count += 1
             for word in stripped_example:
@@ -57,7 +70,7 @@ class MultiClassNaiveBayes():
                 else:
                     self.word_frequencies[label][word] = 1
 
-    def predict(self, example: str, pseudo=0.0001, threshold=0.01) -> Sequence[float]:
+    def predict(self, example: str, pseudo=0.0001, threshold=0.275) -> Sequence[float]:
         """
         Predict the P(label|example) for example text, return probabilities as a sequence
 
@@ -69,14 +82,14 @@ class MultiClassNaiveBayes():
             Sequence[float]: Probabilities in order of originally provided labels
         """
         stripped_example = self.preprocess(example)
-
+        stripped_example = self.n_gram(stripped_example, NGRAM)
         # Calculate the prior probabilities and conditional probabilities for each label
-        prior_probabilities = {label: math.log(self.document_counts[label] / sum(self.document_counts.values()) ) for label in self.labels}
-        conditional_probabilities = {label: self.conditional_probability(stripped_example, label, pseudo) for label in self.labels}
-        naive_bayes_denominator = np.logaddexp.reduce([prior_probabilities[label] + conditional_probabilities[label] for label in self.labels])
+        prior_probabilities = {label: math.log(self.document_counts[label] / self.total_document_count ) for label in self.labels} #outputs are in log space
+        conditional_probabilities = {label: self.conditional_probability(stripped_example, label, pseudo) for label in self.labels} #outputs are in log space
+        total_odds = np.logaddexp.reduce([prior_probabilities[label] + conditional_probabilities[label] for label in self.labels])
 
         # key = label, value = P(label|example)
-        label_probabilities = {label: math.exp(prior_probabilities[label] + conditional_probabilities[label] - naive_bayes_denominator) for label in self.labels}
+        label_probabilities = {label: math.exp(prior_probabilities[label] + conditional_probabilities[label] - total_odds) for label in self.labels}
     
         # Applying the Threshold
         for label in self.labels:
@@ -92,42 +105,22 @@ class MultiClassNaiveBayes():
 
         Args:
             words (list): list of preprocessed words. The features.
-            sentiment (int): the sentiment to calculate the conditional probability for. 0 for negative, 1 for positive
+            label (Hashable): the sentiment label.
             pseudo (float): Pseudo-count for Laplace smoothing. Defaults to 0.0001.
         
         Returns:
             float: the conditional probability of the features given the sentiment. (log probability to avoid underflow)
 
         """
-        accumulation_of_probabilities = 0
+        conditional_probability = 0
 
         for word in words:
             word_count = self.word_frequencies[label].get(word, 0)
             # Using Laplace smoothing to avoid zero probabilities
             probability = (word_count + pseudo) / (self.total_words_for_label[label] + pseudo * len(self.word_frequencies[label]) )
-            accumulation_of_probabilities += math.log(probability)
+            conditional_probability += math.log(probability)
 
-        return accumulation_of_probabilities
-
-
-
-def compute_metrics(y_true, y_pred):
-    """Compute metrics to evaluate binary classification accuracy
-
-    Args:
-        y_true: Array-like ground truth (correct) target values.
-        y_pred: Array-like estimated targets as returned by a classifier.
-
-    Returns:
-        dict: Dictionary of metrics in including confusion matrix, accuracy, recall, precision and F1
-    """
-    return {
-        "confusion": metrics.confusion_matrix(y_true, y_pred),
-        "accuracy": metrics.accuracy_score(y_true, y_pred),
-        "recall": metrics.recall_score(y_true, y_pred),
-        "precision": metrics.precision_score(y_true, y_pred),
-        "f1": metrics.f1_score(y_true, y_pred),
-    }
+        return conditional_probability
 
 
 if __name__ == "__main__":
@@ -163,14 +156,10 @@ if __name__ == "__main__":
             y_pred.append(predicted_labels)
 
         # Binarize the true and predicted labels for evaluation
-        from sklearn.preprocessing import MultiLabelBinarizer
         mlb = MultiLabelBinarizer(classes=test_data.columns[9:])
         y_true_bin = mlb.fit_transform(y_true)
         y_pred_bin = mlb.transform(y_pred)
 
         # Print classification metrics
-        from sklearn.metrics import classification_report
-        print("Multi-Class Classification Report:")
+        print("Accuracy: ", accuracy_score(y_true_bin, y_pred_bin))
         print(classification_report(y_true_bin, y_pred_bin, target_names=test_data.columns[9:]))
-
-
