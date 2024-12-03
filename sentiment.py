@@ -4,18 +4,16 @@ CS311 Project Song Lyrics Sentiment Analysis
 Full Name: Frank Bautista
 
 """
-import argparse, math, string
+import argparse, math
 from typing import Generator, Hashable, Iterable, List, Sequence, Tuple
 import numpy as np
 from sklearn.metrics import accuracy_score, classification_report
 import pandas as pd
 from sklearn.model_selection import train_test_split # for splitting the dataset into training and testing sets
 from sklearn.preprocessing import MultiLabelBinarizer 
-from nltk.corpus import stopwords
+from preprocessing import TextPreprocessor
 
-stop_words = set(stopwords.words('english'))
-
-NGRAM = 5
+preprocessor = TextPreprocessor()
 
 class MultiClassNaiveBayes():
     def __init__(self, labels):
@@ -25,34 +23,7 @@ class MultiClassNaiveBayes():
         self.total_document_count = 0
         self.total_words_for_label = {label: 0 for label in self.labels}
 
-    def preprocess(self, text: str) -> List[str]:
-        """
-        Preprocess a text document by lowercasing, removing punctuation, and splitting into words
 
-        Args:
-            text (str): Input text
-
-        Returns:
-            List[str]: List of preprocessed words
-        """
-        text = text.lower()
-        text = text.translate(str.maketrans('', '', string.punctuation)) # remove punctuation
-        text = text.strip() # remove leading and trailing whitespaces
-        text = text.split()
-        filtered_text = [word for word in text if word not in stop_words] # remove stopwords
-        return filtered_text
-
-    def n_gram (self, words: List[str], n: int):
-        """Generate n-grams by splitting words into n-sized chunks or smaller if not long enough."""
-
-        n_grams = []
-        for word in words:
-            if len(word) > n:  
-                n_grams.extend([word[i:i+n] for i in range(len(word) - n + 1)])
-            else:
-                n_grams.append(word) 
-        return n_grams
-    
     def add_example(self, example: str, labels: List[Hashable]):
         """
         Add a single training example with label to the model
@@ -62,8 +33,8 @@ class MultiClassNaiveBayes():
             label List[Hashable]: Example labels (multi-class)
 
         """
-        preprocessed_text = self.preprocess(example)
-        #preprocessed_text = self.n_gram(stripped_example, NGRAM)
+        preprocessed_text = preprocessor.preprocess(example)
+
         for label in labels:
             self.document_counts[label] += 1
             self.total_document_count += 1
@@ -74,7 +45,7 @@ class MultiClassNaiveBayes():
                 else:
                     self.word_frequencies[label][word] = 1
 
-    def predict(self, example: str, pseudo=0.0001, threshold=0.4) -> Sequence[float]:
+    def predict(self, example: str, pseudo=0.0001, threshold=0.25) -> Sequence[float]:
         """
         Predict the P(label|example) for example text, return probabilities as a sequence
 
@@ -85,12 +56,11 @@ class MultiClassNaiveBayes():
         Returns:
             (List[str], dict{str: float} ): List of labels over the threshold, and original dictionary of probabilities
         """
-        stripped_example = self.preprocess(example)
-        #stripped_example = self.n_gram(stripped_example, NGRAM)
+        preprocessed_text = preprocessor.preprocess(example)
 
         # Calculate the prior probabilities and conditional probabilities for each label
         prior_probabilities = {label: math.log(self.document_counts[label] / self.total_document_count ) for label in self.labels} #outputs are in log space
-        conditional_probabilities = {label: self.conditional_probability(stripped_example, label, pseudo) for label in self.labels} #outputs are in log space
+        conditional_probabilities = {label: self.conditional_probability(preprocessed_text, label, pseudo) for label in self.labels} #outputs are in log space
         total_odds = np.logaddexp.reduce([prior_probabilities[label] + conditional_probabilities[label] for label in self.labels])
 
         # key = label, value = P(label|example)
@@ -161,7 +131,7 @@ if __name__ == "__main__":
 
         best_threshold = 0
         best_accuracy = 0
-        threshold_range = [i * 0.05 for i in range(1, 16)]  # From 0.05 to 0.75 in steps of 0.05
+        threshold_range = [i * 0.05 for i in range(1, 13)]  # From 0.05 to 0.60 in steps of 0.05
 
         for threshold in threshold_range: 
             y_true = []
