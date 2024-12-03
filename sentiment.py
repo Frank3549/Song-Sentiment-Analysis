@@ -129,43 +129,83 @@ class MultiClassNaiveBayes():
         return conditional_probability
 
 
-if __name__ == "__main__":
 
+
+if __name__ == "__main__":
+    
+    # Load the dataset
     full_dataset = pd.concat([pd.read_csv("goEmotionData\goemotions_1.csv"), pd.read_csv("goEmotionData\goemotions_2.csv"), pd.read_csv("goEmotionData\goemotions_3.csv")]) 
     filtered_dataset =  full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
+    
+    # Split the dataset into training and testing sets
     train_data, test_data = train_test_split(filtered_dataset, test_size=0.2, random_state=42) # 42 is the answer to everything and also the seed here.
 
-    parser = argparse.ArgumentParser(description="Train Naive Bayes sentiment analyzer")
-
+    parser = argparse.ArgumentParser(description="Train Naive Bayes Multi-class sentiment analyzer")
     parser.add_argument("example", nargs="?", default=None)
+    parser.add_argument("--threshold_tuning", action="store_true", help="Automatically tune the threshold to find the best value to achieve the best accuracy") 
     args = parser.parse_args()
 
     # Train model
     model = MultiClassNaiveBayes(labels=filtered_dataset.columns[9:].tolist())
-
     for _, row in train_data.iterrows():
         text  = row['text'] # extract text from the 'text' column
         emotion_labels = [label for label in train_data.columns[9:] if row[label] == 1] 
         model.add_example(text, emotion_labels)
+    
+    # Predict on a single example
     if args.example:
         print(model.predict(args.example))
+
+    # Find the best threshold for the model
+    if args.threshold_tuning:
+
+        best_threshold = 0
+        best_accuracy = 0
+        threshold_range = [i * 0.05 for i in range(1, 16)]  # From 0.05 to 0.75 in steps of 0.05
+
+        for threshold in threshold_range: 
+            y_true = []
+            y_predicted = []
+
+            for _, row in test_data.iterrows():
+                text = row['text']
+                emotion_labels = [label for label in test_data.columns[9:] if row[label] == 1]
+                predicted_labels, _ = model.predict(text, threshold=threshold)
+                y_true.append(emotion_labels)
+                y_predicted.append(predicted_labels)
+
+            # Evaluate the model performance
+            mlb = MultiLabelBinarizer(classes=test_data.columns[9:])
+            y_true_bin = mlb.fit_transform(y_true)
+            y_pred_bin = mlb.transform(y_predicted)
+
+            accuracy = accuracy_score(y_true_bin, y_pred_bin)
+
+            # Update the best threshold
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+                best_threshold = threshold  
+
+        print(f"Best threshold: {best_threshold} with accuracy: {best_accuracy:.4f}")
+
+    # Predict on test_data and evaluate the model
     else:
-        # Predict on test_data
+        
         y_true = []
-        y_pred = []
+        y_predicted = []
         for _, row in test_data.iterrows():
             text = row['text']
             emotion_labels = [label for label in test_data.columns[9:] if row[label] == 1]
             predicted_labels, original_probabilities = model.predict(text)
 
             y_true.append(emotion_labels)
-            y_pred.append(predicted_labels)
+            y_predicted.append(predicted_labels)
 
         # Binarize the true and predicted labels 
         model = MultiLabelBinarizer(classes=test_data.columns[9:]) 
         
         y_true_bin = model.fit_transform(y_true)
-        y_pred_bin = model.transform(y_pred)
+        y_pred_bin = model.transform(y_predicted)
 
         #Print original probabilities and their labels:
         #print("output for one text example: %s" % text)
