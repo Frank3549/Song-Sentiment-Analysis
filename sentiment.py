@@ -13,6 +13,8 @@ from sklearn.model_selection import train_test_split # for splitting the dataset
 from sklearn.preprocessing import MultiLabelBinarizer 
 from nltk.corpus import stopwords
 
+stop_words = set(stopwords.words('english'))
+
 NGRAM = 5
 
 class MultiClassNaiveBayes():
@@ -36,7 +38,9 @@ class MultiClassNaiveBayes():
         text = text.lower()
         text = text.translate(str.maketrans('', '', string.punctuation)) # remove punctuation
         text = text.strip() # remove leading and trailing whitespaces
-        return text.split()
+        text = text.split()
+        filtered_text = [word for word in text if word not in stop_words] # remove stopwords
+        return filtered_text
 
     def n_gram (self, words: List[str], n: int):
         """Generate n-grams by splitting words into n-sized chunks or smaller if not long enough."""
@@ -58,19 +62,19 @@ class MultiClassNaiveBayes():
             label List[Hashable]: Example labels (multi-class)
 
         """
-        stripped_example = self.preprocess(example)
-        stripped_example = self.n_gram(stripped_example, NGRAM)
+        preprocessed_text = self.preprocess(example)
+        #preprocessed_text = self.n_gram(stripped_example, NGRAM)
         for label in labels:
             self.document_counts[label] += 1
             self.total_document_count += 1
-            for word in stripped_example:
+            for word in preprocessed_text:
                 self.total_words_for_label[label] += 1
                 if word in self.word_frequencies[label]:
                     self.word_frequencies[label][word] += 1
                 else:
                     self.word_frequencies[label][word] = 1
 
-    def predict(self, example: str, pseudo=0.0001, threshold=0.275) -> Sequence[float]:
+    def predict(self, example: str, pseudo=0.0001, threshold=0.4) -> Sequence[float]:
         """
         Predict the P(label|example) for example text, return probabilities as a sequence
 
@@ -79,25 +83,27 @@ class MultiClassNaiveBayes():
             pseudo (float, optional): Pseudo-count for Laplace smoothing. Defaults to 0.0001.
 
         Returns:
-            Sequence[float]: Probabilities in order of originally provided labels
+            (List[str], dict{str: float} ): List of labels over the threshold, and original dictionary of probabilities
         """
         stripped_example = self.preprocess(example)
-        stripped_example = self.n_gram(stripped_example, NGRAM)
+        #stripped_example = self.n_gram(stripped_example, NGRAM)
+
         # Calculate the prior probabilities and conditional probabilities for each label
         prior_probabilities = {label: math.log(self.document_counts[label] / self.total_document_count ) for label in self.labels} #outputs are in log space
         conditional_probabilities = {label: self.conditional_probability(stripped_example, label, pseudo) for label in self.labels} #outputs are in log space
         total_odds = np.logaddexp.reduce([prior_probabilities[label] + conditional_probabilities[label] for label in self.labels])
 
         # key = label, value = P(label|example)
-        label_probabilities = {label: math.exp(prior_probabilities[label] + conditional_probabilities[label] - total_odds) for label in self.labels}
-    
+        original_label_probabilities = {label: math.exp(prior_probabilities[label] + conditional_probabilities[label] - total_odds) for label in self.labels}
+        label_probabilities = original_label_probabilities.copy()
+
         # Applying the Threshold
         for label in self.labels:
             if label_probabilities[label] < threshold:
                 label_probabilities[label] = 0
 
-        # Only return labels with non-zero probabilities
-        return [label for label in self.labels if label_probabilities[label] > 0]
+        # Only return labels with non-zero probabilities (those over the threshold) and the original probabilities dictionary
+        return ([label for label in self.labels if label_probabilities[label] > 0], original_label_probabilities)
     
     def conditional_probability(self, words, label, pseudo=0.0001) -> float:
         """
@@ -150,16 +156,24 @@ if __name__ == "__main__":
         for _, row in test_data.iterrows():
             text = row['text']
             emotion_labels = [label for label in test_data.columns[9:] if row[label] == 1]
-            predicted_labels = model.predict(text)
+            predicted_labels, original_probabilities = model.predict(text)
 
             y_true.append(emotion_labels)
             y_pred.append(predicted_labels)
 
-        # Binarize the true and predicted labels for evaluation
-        mlb = MultiLabelBinarizer(classes=test_data.columns[9:])
-        y_true_bin = mlb.fit_transform(y_true)
-        y_pred_bin = mlb.transform(y_pred)
+        # Binarize the true and predicted labels 
+        model = MultiLabelBinarizer(classes=test_data.columns[9:]) 
+        
+        y_true_bin = model.fit_transform(y_true)
+        y_pred_bin = model.transform(y_pred)
 
+        #Print original probabilities and their labels:
+        #print("output for one text example: %s" % text)
+        #print(emotion_labels)
+        for label in test_data.columns[9:]:
+            print(label, round(original_probabilities[label], 8))
+            #print(label, original_probabilities[label])
+        
         # Print classification metrics
         print("Accuracy: ", accuracy_score(y_true_bin, y_pred_bin))
         print(classification_report(y_true_bin, y_pred_bin, target_names=test_data.columns[9:]))

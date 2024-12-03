@@ -46,3 +46,15 @@ To assist you during development, a unit test suite is provided in `sentiment_te
 ```
 $ python3 sentiment_test.py
 ```
+
+## How to download stopwords set
+ 
+In the terminal run the following:
+
+pip install nltk
+python (this will start the interactive python shell)
+import nltk
+nltk.download('stopwords')
+
+
+Then run "exit()" to leave the terminal.
