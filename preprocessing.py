@@ -34,9 +34,9 @@ class TextPreprocessor:
 
         return filtered_text
 
-    def unigram_ngram (self, words: List[str], n: int) -> List[str]:
+    def unigram_ngram (self, words: List[str], n: int ) -> List[str]:
         """
-        Generate n-grams by splitting words into n-sized chunks or smaller if not long enough.
+        Generate unigrams + n-grams.
 
         Args:
             words (List[str]): List of preprocessed words
@@ -73,6 +73,21 @@ class TextPreprocessor:
             else:
                 n_grams.append(word) 
         return n_grams
+    
+    def unigram_bigram_trigram (self, words: List[str]) -> List[str]:
+        """
+        Generate unigram + bigrams + trigram.
+
+        Args:
+            words (List[str]): List of preprocessed words
+        
+        Returns:
+            List[str]: List of unigram + bigrams + trigram
+
+        """
+        bigrams = [' '.join([words[i], words[i+1]]) for i in range(len(words) - 1)]
+        trigrams = [' '.join([words[i], words[i+1], words[i+2]]) for i in range(len(words) - 2)]
+        return words + bigrams + trigrams
     
     def unigram_bigram (self, words: List[str]) -> List[str]: 
         """

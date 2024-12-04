@@ -45,7 +45,7 @@ class MultiClassNaiveBayes():
                 else:
                     self.word_frequencies[label][word] = 1
 
-    def predict(self, example: str, pseudo=0.0001, threshold=0.25) -> Sequence[float]:
+    def predict(self, example: str, pseudo=0.0001, threshold=0.45) -> Sequence[float]:
         """
         Predict the P(label|example) for example text, return probabilities as a sequence
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     filtered_dataset =  full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
     
     # Split the dataset into training and testing sets
-    train_data, test_data = train_test_split(filtered_dataset, test_size=0.2, random_state=42) # 42 is the answer to everything and also the seed here.
+    train_data, test_data = train_test_split(filtered_dataset, test_size=0.1, random_state=42) # 42 is the answer to everything and also the seed here.
 
     parser = argparse.ArgumentParser(description="Train Naive Bayes Multi-class sentiment analyzer")
     parser.add_argument("example", nargs="?", default=None)
