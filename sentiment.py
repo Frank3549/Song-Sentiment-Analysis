@@ -108,20 +108,19 @@ if __name__ == "__main__":
                                pd.read_csv("goEmotionData/goemotions_2.csv"),
                                 pd.read_csv("goEmotionData/goemotions_3.csv")
                             ]) 
-    train_data = full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
-    
-    # Load the test dataset with new column names, process emotion_ids, and create a new column with the corresponding emotion labels
-    test_data = pd.read_csv("goEmotionData/test.tsv", sep='\t', header=None, names=['text', 'emotion_ids', 'comment_id'])
-    test_data['emotion_ids'] = test_data['emotion_ids'].apply(lambda x: x.split(','))
-    test_data['emotion_labels'] = test_data['emotion_ids'].apply(lambda ids: [emotion_labels[id] for id in ids])
-
-        
+    full_dataset = full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
 
     # Extract the emotion labels
     emotion_labels = full_dataset.columns[9:].tolist()
 
+    # Load the test dataset with new column names, process emotion_ids, and create a new column with the corresponding emotion labels
+    test_data = pd.read_csv("goEmotionData/test.tsv", sep='\t', header=None, names=['text', 'emotion_ids', 'comment_id'])
+    test_data['emotion_ids'] = test_data['emotion_ids'].apply(lambda x: x.split(','))
+    test_data['emotion_labels'] = test_data['emotion_ids'].apply(lambda ids: [emotion_labels[int(id)] for id in ids])
+
+    # Parse command line arguments
     parser = argparse.ArgumentParser(description="Train Naive Bayes Multi-class sentiment analyzer")
-    parser.add_argument("example", nargs="?", default=None)
+    parser.add_argument("--example", nargs="?", default=None)
     parser.add_argument("--threshold_tuning", action="store_true", help="Automatically tune the threshold to find the best value to achieve the best accuracy") 
     args = parser.parse_args()
 
@@ -134,10 +133,11 @@ if __name__ == "__main__":
     
     # Predict on a single example
     if args.example:
-        print(model.predict(args.example))
+        output, _ = model.predict(args.example)
+        print(output)
 
     # Find the best threshold for the model using the test data (formatted differently)
-    if args.threshold_tuning:
+    elif args.threshold_tuning:
 
         best_threshold = 0
         best_accuracy = 0
@@ -184,12 +184,9 @@ if __name__ == "__main__":
         y_true_bin = mdl.fit_transform(y_true)
         y_pred_bin = mdl.transform(y_predicted)
 
-        #Print original probabilities and their labels:
-        #print("output for one text example: %s" % text)
-        #print(emotion_labels)
+
         for label in emotion_labels:
             print(label, round(original_probabilities[label], 8))
-            #print(label, original_probabilities[label])
         
         # Print classification metrics
         print("Accuracy: ", accuracy_score(y_true_bin, y_pred_bin))
