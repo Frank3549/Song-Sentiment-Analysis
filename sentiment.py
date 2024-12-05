@@ -136,7 +136,7 @@ if __name__ == "__main__":
     if args.example:
         print(model.predict(args.example))
 
-    # Find the best threshold for the model
+    # Find the best threshold for the model using the test data (formatted differently)
     if args.threshold_tuning:
 
         best_threshold = 0
@@ -147,11 +147,10 @@ if __name__ == "__main__":
             y_true = []
             y_predicted = []
 
-            for _, row in full_dataset.iterrows():
+            for _, row in test_data.iterrows():
                 text = row['text']
-                labels_present = [label for label in emotion_labels if row[label] == 1]
                 predicted_labels, _ = model.predict(text, threshold=threshold)
-                y_true.append(labels_present)
+                y_true.append(row['emotion_labels'])
                 y_predicted.append(predicted_labels)
 
             # Evaluate the model performance
@@ -173,12 +172,10 @@ if __name__ == "__main__":
         
         y_true = []
         y_predicted = []
-        for _, row in full_dataset.iterrows():
+        for _, row in test_data.iterrows():
             text = row['text']
-            labels_present = [label for label in emotion_labels if row[label] == 1]
             predicted_labels, original_probabilities = model.predict(text)
-
-            y_true.append(labels_present)
+            y_true.append(row['emotion_labels'])
             y_predicted.append(predicted_labels)
 
         # Binarize the true and predicted labels 
