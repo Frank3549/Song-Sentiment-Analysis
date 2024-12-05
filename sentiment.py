@@ -109,7 +109,13 @@ if __name__ == "__main__":
                                 pd.read_csv("goEmotionData/goemotions_3.csv")
                             ]) 
     train_data = full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
+    
+    # Load the test dataset with new column names, process emotion_ids, and create a new column with the corresponding emotion labels
     test_data = pd.read_csv("goEmotionData/test.tsv", sep='\t', header=None, names=['text', 'emotion_ids', 'comment_id'])
+    test_data['emotion_ids'] = test_data['emotion_ids'].apply(lambda x: x.split(','))
+    test_data['emotion_labels'] = test_data['emotion_ids'].apply(lambda ids: [emotion_labels[id] for id in ids])
+
+        
 
     # Extract the emotion labels
     emotion_labels = full_dataset.columns[9:].tolist()
