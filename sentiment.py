@@ -104,11 +104,15 @@ class MultiClassNaiveBayes():
 if __name__ == "__main__":
     
     # Load the dataset
-    full_dataset = pd.concat([pd.read_csv("goEmotionData\goemotions_1.csv"), pd.read_csv("goEmotionData\goemotions_2.csv"), pd.read_csv("goEmotionData\goemotions_3.csv")]) 
-    filtered_dataset =  full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
-    
-    # Split the dataset into training and testing sets
-    train_data, test_data = train_test_split(filtered_dataset, test_size=0.1, random_state=42) # 42 is the answer to everything and also the seed here.
+    full_dataset = pd.concat([pd.read_csv("goEmotionData/goemotions_1.csv"),
+                               pd.read_csv("goEmotionData/goemotions_2.csv"),
+                                pd.read_csv("goEmotionData/goemotions_3.csv")
+                            ]) 
+    train_data = full_dataset[full_dataset['example_very_unclear'] == 0] # remove unclear examples that provide no labels.
+    test_data = pd.read_csv("goEmotionData/test.tsv", sep='\t', header=None, names=['text', 'emotion_ids', 'comment_id'])
+
+    # Extract the emotion labels
+    emotion_labels = full_dataset.columns[9:].tolist()
 
     parser = argparse.ArgumentParser(description="Train Naive Bayes Multi-class sentiment analyzer")
     parser.add_argument("example", nargs="?", default=None)
@@ -116,11 +120,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Train model
-    model = MultiClassNaiveBayes(labels=filtered_dataset.columns[9:].tolist())
-    for _, row in train_data.iterrows():
+    model = MultiClassNaiveBayes(labels=emotion_labels)
+    for _, row in full_dataset.iterrows():
         text  = row['text'] # extract text from the 'text' column
-        emotion_labels = [label for label in train_data.columns[9:] if row[label] == 1] 
-        model.add_example(text, emotion_labels)
+        labels_present = [label for label in emotion_labels if row[label] == 1] 
+        model.add_example(text, labels_present)
     
     # Predict on a single example
     if args.example:
@@ -137,15 +141,15 @@ if __name__ == "__main__":
             y_true = []
             y_predicted = []
 
-            for _, row in test_data.iterrows():
+            for _, row in full_dataset.iterrows():
                 text = row['text']
-                emotion_labels = [label for label in test_data.columns[9:] if row[label] == 1]
+                labels_present = [label for label in emotion_labels if row[label] == 1]
                 predicted_labels, _ = model.predict(text, threshold=threshold)
-                y_true.append(emotion_labels)
+                y_true.append(labels_present)
                 y_predicted.append(predicted_labels)
 
             # Evaluate the model performance
-            mlb = MultiLabelBinarizer(classes=test_data.columns[9:])
+            mlb = MultiLabelBinarizer(classes=emotion_labels)
             y_true_bin = mlb.fit_transform(y_true)
             y_pred_bin = mlb.transform(y_predicted)
 
@@ -163,27 +167,27 @@ if __name__ == "__main__":
         
         y_true = []
         y_predicted = []
-        for _, row in test_data.iterrows():
+        for _, row in full_dataset.iterrows():
             text = row['text']
-            emotion_labels = [label for label in test_data.columns[9:] if row[label] == 1]
+            labels_present = [label for label in emotion_labels if row[label] == 1]
             predicted_labels, original_probabilities = model.predict(text)
 
-            y_true.append(emotion_labels)
+            y_true.append(labels_present)
             y_predicted.append(predicted_labels)
 
         # Binarize the true and predicted labels 
-        model = MultiLabelBinarizer(classes=test_data.columns[9:]) 
+        mdl = MultiLabelBinarizer(classes=emotion_labels) 
         
-        y_true_bin = model.fit_transform(y_true)
-        y_pred_bin = model.transform(y_predicted)
+        y_true_bin = mdl.fit_transform(y_true)
+        y_pred_bin = mdl.transform(y_predicted)
 
         #Print original probabilities and their labels:
         #print("output for one text example: %s" % text)
         #print(emotion_labels)
-        for label in test_data.columns[9:]:
+        for label in emotion_labels:
             print(label, round(original_probabilities[label], 8))
             #print(label, original_probabilities[label])
         
         # Print classification metrics
         print("Accuracy: ", accuracy_score(y_true_bin, y_pred_bin))
-        print(classification_report(y_true_bin, y_pred_bin, target_names=test_data.columns[9:]))
+        print(classification_report(y_true_bin, y_pred_bin, target_names=emotion_labels))
