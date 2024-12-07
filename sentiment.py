@@ -211,5 +211,7 @@ if __name__ == "__main__":
         y_pred_bin = mdl.transform(y_predicted)
 
         # Print classification metrics
-        print("Accuracy: ", accuracy_score(y_true_bin, y_pred_bin))
-        print(classification_report(y_true_bin, y_pred_bin, target_names=emotion_labels))
+        accuracy = accuracy_score(y_true_bin, y_pred_bin)
+        print(f"\n------------Accuracy: {accuracy}------------\n")
+        print("\n------------Classification Report:------------\n")
+        print(classification_report(y_true_bin, y_pred_bin, target_names=emotion_labels, zero_division=0))
