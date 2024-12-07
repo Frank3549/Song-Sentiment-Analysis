@@ -1,5 +1,5 @@
 """
-CS311 Project Song Lyrics Sentiment Analysis
+CS311 Project Song Lyrics Sentiment Analysis (Multi-class Naive Bayes)
 
 Full Name: Frank Bautista
 
@@ -14,6 +14,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from preprocessing import TextPreprocessor
 
 preprocessor = TextPreprocessor()
+USER_THRESHOLD = 0.02
 
 class MultiClassNaiveBayes():
     def __init__(self, labels):
@@ -45,7 +46,7 @@ class MultiClassNaiveBayes():
                 else:
                     self.word_frequencies[label][word] = 1
 
-    def predict(self, example: str, pseudo=0.0001, threshold=0.45) -> Sequence[float]:
+    def predict(self, example: str, pseudo=0.0001, threshold=0.50) -> Sequence[float]:
         """
         Predict the P(label|example) for example text, return probabilities as a sequence
 
@@ -122,19 +123,44 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Naive Bayes Multi-class sentiment analyzer")
     parser.add_argument("--example", nargs="?", default=None)
     parser.add_argument("--threshold_tuning", action="store_true", help="Automatically tune the threshold to find the best value to achieve the best accuracy") 
+    parser.add_argument("--user", action="store_true", help="Run in interactive mode for real-time predictions")
+
     args = parser.parse_args()
 
     # Train model
+    print("Training the model... This may take a while.")
     model = MultiClassNaiveBayes(labels=emotion_labels)
     for _, row in full_dataset.iterrows():
         text  = row['text'] # extract text from the 'text' column
         labels_present = [label for label in emotion_labels if row[label] == 1] 
         model.add_example(text, labels_present)
-    
-    # Predict on a single example
-    if args.example:
-        output, _ = model.predict(args.example)
-        print(output)
+
+    # Run interactive loop for user input
+    if args.user:
+        print("The model is ready. Type 'exit' to quit once done.")
+        while True:
+            user_input = input("Enter a sentence or text for emotion prediction: ")
+            if user_input.lower() == "exit":
+                break
+            predicted_labels, original_probs = model.predict(user_input, threshold=USER_THRESHOLD)  # lowered threshold for more predictions
+            
+            # Sorting the emotions by their predicted probability, in descending order
+            sorted_emotions = sorted(original_probs.items(), key=lambda x: x[1], reverse=True)
+
+            if not predicted_labels:
+                print("\n-------Emotions could not confidently be detected, however the probabilities are:-------\n")
+                for label, prob in sorted_emotions:
+                    print(f"{label} - {prob:.5f}")
+            else:
+                print("\nPredicted Emotions:")
+                for label in predicted_labels:
+                    print(f"{label} - {original_probs[label]:.5f}")
+
+                # Print all emotions sorted by probability for additional detail (optional)
+                print("\nAll Detected Emotions in Order:")
+                for label, prob in sorted_emotions:
+                    print(f"{label} - {prob:.5f}")
+            print("\n")    
 
     # Find the best threshold for the model using the test data (formatted differently)
     elif args.threshold_tuning:
@@ -184,10 +210,6 @@ if __name__ == "__main__":
         y_true_bin = mdl.fit_transform(y_true)
         y_pred_bin = mdl.transform(y_predicted)
 
-
-        for label in emotion_labels:
-            print(label, round(original_probabilities[label], 8))
-        
         # Print classification metrics
         print("Accuracy: ", accuracy_score(y_true_bin, y_pred_bin))
         print(classification_report(y_true_bin, y_pred_bin, target_names=emotion_labels))
