@@ -1,5 +1,5 @@
 """
-CS311 Project Song Lyrics Sentiment Analysis (Multi-class Naive Bayes)
+CS311 Project Song Lyrics Sentiment Analysis (Multi-Label Naive Bayes)
 
 Full Name: Frank Bautista
 
@@ -16,7 +16,7 @@ from preprocessing import TextPreprocessor
 preprocessor = TextPreprocessor()
 USER_THRESHOLD = 0.02
 
-class MultiClassNaiveBayes():
+class MultiLabelNaiveBayes():
     def __init__(self, labels):
         self.labels = labels
         self.word_frequencies = {label: {} for label in self.labels}
@@ -31,7 +31,7 @@ class MultiClassNaiveBayes():
 
         Args:
             example (str): Text input
-            label List[Hashable]: Example labels (multi-class)
+            label List[Hashable]: Example labels
 
         """
         preprocessed_text = preprocessor.preprocess(example)
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     test_data['emotion_labels'] = test_data['emotion_ids'].apply(lambda ids: [emotion_labels[int(id)] for id in ids])
 
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Train Naive Bayes Multi-class sentiment analyzer")
+    parser = argparse.ArgumentParser(description="Train Naive Bayes Multi-Label sentiment analyzer")
     parser.add_argument("--example", nargs="?", default=None)
     parser.add_argument("--threshold_tuning", action="store_true", help="Automatically tune the threshold to find the best value to achieve the best accuracy") 
     parser.add_argument("--user", action="store_true", help="Run in interactive mode for real-time predictions")
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     # Train model
     print("Training the model... This may take a while.")
-    model = MultiClassNaiveBayes(labels=emotion_labels)
+    model = MultiLabelNaiveBayes(labels=emotion_labels)
     for _, row in full_dataset.iterrows():
         text  = row['text'] # extract text from the 'text' column
         labels_present = [label for label in emotion_labels if row[label] == 1] 
