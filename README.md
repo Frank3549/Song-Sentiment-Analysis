@@ -34,7 +34,7 @@ neutral - 0.14567
 
 ```
 
-## How to download the required Stopwords library
+## Downloading the required Stopwords library
  
 In the terminal run the following:
 
