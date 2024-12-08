@@ -14,7 +14,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from preprocessing import TextPreprocessor
 
 preprocessor = TextPreprocessor()
-USER_THRESHOLD = 0.02
+USER_THRESHOLD = 0.05
 USER_THRESHOLD_RANDOM = 0.50
 
 class MultiLabelNaiveBayes():
@@ -152,7 +152,7 @@ if __name__ == "__main__":
                 print(f"\nRandom Example: {random_text}")
                 print(f"True Labels: {', '.join(random_labels)}")
 
-                predicted_labels, original_probs = model.predict(random_text, threshold=USER_THRESHOLD_RANDOM) # higher threshold for random examples
+                predicted_labels, original_probs = model.predict(random_text) # higher threshold for random examples
 
                 # Sorting emotions by predicted probability
                 sorted_emotions = sorted(original_probs.items(), key=lambda x: x[1], reverse=True)
