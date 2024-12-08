@@ -1,4 +1,4 @@
-# Sentiment Analysis Project by Frank Bautista
+# Multi-Label Emotion Recognition
 
 
 # Optional Arguments:
