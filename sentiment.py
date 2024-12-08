@@ -9,7 +9,6 @@ from typing import Generator, Hashable, Iterable, List, Sequence, Tuple
 import numpy as np
 from sklearn.metrics import accuracy_score, classification_report
 import pandas as pd
-from sklearn.model_selection import train_test_split # for splitting the dataset into training and testing sets
 from sklearn.preprocessing import MultiLabelBinarizer 
 from preprocessing import TextPreprocessor
 
