@@ -1,53 +1,38 @@
-# Sentiment Analysis Project
+# Sentiment Analysis Project by Frank Bautista
+
+
+# Optional Arguments:
+  python3 sentiment.py -h
+
+  options:
+    -h, --help          show this help
+                        message and exit
+    --example [EXAMPLE] Provide your own text/example 
+    --threshold_tuning  Automatically tune
+                        the threshold to
+                        find the best value
+                        to achieve the best
+                        accuracy
+    --user              Run in interactive
+                        mode for real-time
+                        predictions
+  Note: Running the file without any flags runs classification metrics.
+
+
+# Example Of The Output
 
 ```
-$ python3 sentiment.py 
-Confusion: 
-[[10751  2436]
- [ 4293  9707]]
-Accuracy: 0.7524919998528709
-Recall: 0.6933571428571429
-Precision: 0.79939059540476
-F1: 0.7426079638909078
-```
-
-You can provide your own string as an optional argument.
+Enter a sentence or text for emotion prediction (or press r for a random example): r
+Random Example: "I miss you so much. It's hard to carry on."
+True Labels: ['sadness', 'love']
+Predicted Emotions:
+sadness - 0.73214
+love - 0.52103
+neutral - 0.14567
 
 ```
-$ python3 sentiment.py -h
-usage: sentiment.py [-h] [--train TRAIN] [--test TEST] [-m MODEL] [example]
 
-Train Naive Bayes sentiment analyzer
-
-positional arguments:
-  example
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --train TRAIN         Path to zip file or directory containing training files.
-  --test TEST           Path to zip file or directory containing testing files.
-  -m MODEL, --model MODEL
-                        Model to use: One of base or custom
-```
-
-For example, to test your program on a specific string you can provide it as positional argument, e.g., `python3 sentiment.py "computer science is awesome"`. Use double quotes to ensure that your input string is treated as a single input.
-
-```
-$ python3 sentiment.py "computer science is awesome"
-[0.23071661 0.76928339]
-```
-
-** Note that the skeleton code will read the the zip file directly. You do not need to unzip those files.** 
-
-## Unit testing
-
-To assist you during development, a unit test suite is provided in `sentiment_test.py`. These tests are a subset of the tests run by Gradescope. You can run the tests by executing the `sentiment_test.py` file as a program, e.g. `python3 sentiment_test.py`. 
-
-```
-$ python3 sentiment_test.py
-```
-
-## How to download stopwords set
+## How to download the required Stopwords library
  
 In the terminal run the following:
 
@@ -55,6 +40,5 @@ pip install nltk
 python (this will start the interactive python shell)
 import nltk
 nltk.download('stopwords')
-
 
 Then run "exit()" to leave the terminal.

@@ -15,6 +15,7 @@ from preprocessing import TextPreprocessor
 
 preprocessor = TextPreprocessor()
 USER_THRESHOLD = 0.02
+USER_THRESHOLD_RANDOM = 0.50
 
 class MultiLabelNaiveBayes():
     def __init__(self, labels):
@@ -137,32 +138,55 @@ if __name__ == "__main__":
 
     # Run interactive loop for user input
     if args.user:
-        print("The model is ready. Type 'exit' to quit once done.")
+        print("The model is ready. Type 'exit' to quit once done or 'r' to test a random example from the test dataset.\n")
         while True:
-            user_input = input("Enter a sentence or text for emotion prediction: ")
+            user_input = input("Enter a sentence or text for emotion prediction (or 'r' for a random example): ")
             if user_input.lower() == "exit":
                 break
-            predicted_labels, original_probs = model.predict(user_input, threshold=USER_THRESHOLD)  # lowered threshold for more predictions
-            
-            # Sorting the emotions by their predicted probability, in descending order
-            sorted_emotions = sorted(original_probs.items(), key=lambda x: x[1], reverse=True)
+            elif user_input.lower() == "r":
+                # Select a random example from the test_data
+                random_row = test_data.sample(1).iloc[0]
+                random_text = random_row['text']
+                random_labels = random_row['emotion_labels'] # true labels
 
-            if not predicted_labels:
-                print("\n-------Emotions could not confidently be detected, however the probabilities are:-------\n")
+                print(f"\nRandom Example: {random_text}")
+                print(f"True Labels: {', '.join(random_labels)}")
+
+                predicted_labels, original_probs = model.predict(random_text, threshold=USER_THRESHOLD_RANDOM) # higher threshold for random examples
+
+                # Sorting emotions by predicted probability
+                sorted_emotions = sorted(original_probs.items(), key=lambda x: x[1], reverse=True)
+
+                print("\nPredicted Emotions (sorted by confidence):")
+                for label, prob in sorted_emotions:
+                    if prob > USER_THRESHOLD:
+                        print(f"{label} - {prob:.5f}")
+                # Print all emotions sorted by probability for additional detail 
+                print("\nAll Emotions (sorted by confidence):")
                 for label, prob in sorted_emotions:
                     print(f"{label} - {prob:.5f}")
             else:
-                print("\nPredicted Emotions:")
-                for label in predicted_labels:
-                    print(f"{label} - {original_probs[label]:.5f}")
+                predicted_labels, original_probs = model.predict(user_input, threshold=USER_THRESHOLD)  # lowered threshold for more predictions
 
-                # Print all emotions sorted by probability for additional detail (optional)
-                print("\nAll Detected Emotions in Order:")
-                for label, prob in sorted_emotions:
-                    print(f"{label} - {prob:.5f}")
-            print("\n")    
+                # Sorting emotions by their predicted probability (descending order)
+                sorted_emotions = sorted(original_probs.items(), key=lambda x: x[1], reverse=True)
 
-    # Find the best threshold for the model using the test data (formatted differently)
+                if not predicted_labels:
+                    print("\n-------Emotions could not confidently be detected, however the probabilities are:-------\n")
+                    for label, prob in sorted_emotions:
+                        print(f"{label} - {prob:.5f}")
+                else:
+                    print("\nPredicted Emotions:")
+                    for label in predicted_labels:
+                        print(f"{label} - {original_probs[label]:.5f}")
+
+                    # Print all emotions sorted by probability for additional detail 
+                    print("\nAll Emotions (sorted by confidence):")
+                    for label, prob in sorted_emotions:
+                        print(f"{label} - {prob:.5f}")
+            print("\n")
+
+    # Find the best threshold for the model using the test data (test data is formatted differently)
     elif args.threshold_tuning:
 
         best_threshold = 0
