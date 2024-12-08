@@ -2,6 +2,7 @@
 
 
 # Optional Arguments:
+```
   python3 sentiment.py -h
 
   options:
@@ -16,10 +17,11 @@
     --user              Run in interactive
                         mode for real-time
                         predictions
+```
   Note: Running the file without any flags runs classification metrics.
 
 
-# Example Of The Output
+# Example Output
 
 ```
 Enter a sentence or text for emotion prediction (or press r for a random example): r
@@ -36,9 +38,10 @@ neutral - 0.14567
  
 In the terminal run the following:
 
+```
 pip install nltk
 python (this will start the interactive python shell)
 import nltk
 nltk.download('stopwords')
-
-Then run "exit()" to leave the terminal.
+exit()
+```
