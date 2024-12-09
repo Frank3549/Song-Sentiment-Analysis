@@ -21,7 +21,7 @@
   Note: Running the file without any flags runs classification metrics.
 
 
-# Example Output
+# Example Output:
 
 ```
 Enter a sentence or text for emotion prediction (or press r for a random example): r
@@ -34,7 +34,7 @@ neutral - 0.14567
 
 ```
 
-## Downloading the required Stopwords library
+## Downloading the required Stopwords library:
  
 In the terminal run the following:
 
@@ -44,4 +44,12 @@ python (this will start the interactive python shell)
 import nltk
 nltk.download('stopwords')
 exit()
+```
+
+# Install Other Libraries Required:
+
+In the terminal run the following:
+
+```
+python3 -m pip install numpy scikit-learn pandas
 ```
